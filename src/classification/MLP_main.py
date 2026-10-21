@@ -5,7 +5,12 @@ from torch.utils.data import DataLoader
 from datetime import datetime
 from pathlib import Path
 from src.classification.modules import MLP
-from src.utils import SketchClassifierDataset, get_train_val_records
+from src.utils import (
+    SketchClassifierDataset,
+    get_train_val_records,
+    MODELS_DIR,
+    DATA
+)
 
 
 def train(
@@ -48,25 +53,51 @@ def train(
 
 
 def main():
-    ROOT = Path('C:\\Users\\Utente\\Drake\\GENSKETCH\\data')
     TEST_FOLD = 5
     CAT_SUBSET = 10
 
     selected = set(
-        [f for f in os.listdir(ROOT / 'photo')[:CAT_SUBSET]]
+        [f for f in os.listdir(DATA / 'photo')[:CAT_SUBSET]]
     )
 
-    train_records, val_records, test_records = get_train_val_records(Path(ROOT / 'index.json'), selected, TEST_FOLD)
+    train_records, val_records, test_records = get_train_val_records(Path(DATA / 'index.json'), selected, TEST_FOLD)
 
-    train_dataset = SketchClassifierDataset(ROOT, train_records)
-    val_dataset = SketchClassifierDataset(ROOT, val_records)
-    test_dataset = SketchClassifierDataset(ROOT, test_records)
+    train_dataset = SketchClassifierDataset(DATA, train_records)
+    # val_dataset = SketchClassifierDataset(DATA, val_records)
+    # test_dataset = SketchClassifierDataset(DATA, test_records)
 
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    # val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    # test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-    print(selected)
+    device = torch.device(
+        'cuda' if torch.cuda.is_available() else 'cpu'
+    )
+
+    print(f'Using device {device}')
+
+    loss_fn = nn.CrossEntropyLoss()
+    model = MLP().to(device)
+    lr = 1e-3
+    optim = torch.optim.SGD(model.parameters(), lr)
+    epochs = 500
+
+    avg_loss = train(
+        model,
+        train_loader,
+        loss_fn,
+        optim,
+        device,
+        epochs,
+        100
+    )
+
+    torch.save(
+        model.state_dict(),
+        f'{MODELS_DIR}/mlp_classifier.pt'
+    )
+
+    print(f'AVG TRAIN LOSS: {avg_loss}')
 
 if __name__ == '__main__':
     main()
