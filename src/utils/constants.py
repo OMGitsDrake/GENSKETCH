@@ -4,3 +4,4 @@ from pathlib import Path
 ROOT = Path('C:\\Users\\Utente\\Drake\\GENSKETCH')
 DATA = ROOT / 'data'
 MODELS_DIR = ROOT / 'models'
+LOG_DIR = ROOT / 'logs'

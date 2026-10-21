@@ -8,7 +8,23 @@ from .constants import(
     DATA
 )
 
+from .logging.writing import(
+    write_log,
+)
+
+from .logging.levels import(
+    LOG_DEBUG,
+    LOG_INFO,
+    LOG_WARN,
+    LOG_ERR,
+)
+
 __all__ = [
     'SketchClassifierDataset',
     'get_train_val_records',
+    'write_log',
+    'LOG_DEBUG',
+    'LOG_INFO',
+    'LOG_WARN',
+    'LOG_ERR',
 ]

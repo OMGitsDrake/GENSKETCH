@@ -4,14 +4,16 @@ import os
 from torch.utils.data import DataLoader
 from datetime import datetime
 from pathlib import Path
-from src.classification.modules import MLP
-from src.utils import (
+from .modules import MLP
+from ..utils import (
     SketchClassifierDataset,
     get_train_val_records,
+    write_log,
     MODELS_DIR,
-    DATA
+    DATA,
+    LOG_WARN,
 )
-
+FILE_NAME = Path(__file__).stem
 
 def train(
     model: MLP,
@@ -25,7 +27,9 @@ def train(
     model.train()
 
     print(f'TRAIN STARTED AT {datetime.now().astimezone().strftime("%H:%M:%S")}')
+    write_log(f'TRAIN STARTED AT {datetime.now().astimezone().strftime("%H:%M:%S")}', FILE_NAME)
     avg_loss = float('nan')
+    last_epoch_avg_loss = float('nan')
     for epoch in range(1, epochs + 1):
         epoch_loss = 0.0
         epoch_samples = 0
@@ -45,15 +49,20 @@ def train(
             epoch_samples += sketches.size(0)
 
         avg_loss = epoch_loss / epoch_samples
+        if avg_loss >= last_epoch_avg_loss:
+            write_log(f'Loss function raised on epoch {epoch}, delta: {(avg_loss - last_epoch_avg_loss):.6f}', FILE_NAME, lvl=LOG_WARN)
+        
         if epoch % log_every == 0 or epoch == 1:
             print(f'epoch: {epoch}/{epochs} - loss: {avg_loss:.6f}')
+            write_log(f'epoch: {epoch}/{epochs} - loss: {avg_loss:.6f}', FILE_NAME)
 
-    print(f'TRAIN FIINSHED AT {datetime.now().astimezone().strftime("%H:%M:%S")}')
+    print(f'TRAIN FINSHED AT {datetime.now().astimezone().strftime("%H:%M:%S")}')
+    write_log(f'TRAIN FINSHED AT {datetime.now().astimezone().strftime("%H:%M:%S")}', FILE_NAME)
     return avg_loss
 
 
 def main():
-    TEST_FOLD = 5
+    TEST_FOLD = 4
     CAT_SUBSET = 10
 
     selected = set(
@@ -80,16 +89,18 @@ def main():
     model = MLP().to(device)
     lr = 1e-3
     optim = torch.optim.SGD(model.parameters(), lr)
-    epochs = 500
+    epochs = 300
 
-    avg_loss = train(
+    write_log(f'Starting training on {len(train_records)} records', FILE_NAME)
+    write_log(f'Current configuration: LOSS: {loss_fn.__str__()}, LR: {lr}, OPTIM: {optim.__str__()}, EPOCHS: {epochs}', FILE_NAME)
+    avg_loss = train( # prima prova di train su 500 epoche avg_loss: ~0.56
         model,
         train_loader,
         loss_fn,
         optim,
         device,
         epochs,
-        100
+        epochs//10
     )
 
     torch.save(

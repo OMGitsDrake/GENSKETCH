@@ -1,5 +1,5 @@
 '''
-Definizione dielle classi utilizzate per caricare i dati di classificatore e VAE, rispettivamente classi SketchClassifier e SketchVAE Dataset
+Definizione delle classi utilizzate per caricare i dati di classificatore e VAE, rispettivamente classi SketchClassifier e SketchVAE Dataset
 '''
 
 import random
