@@ -1,1 +1,3 @@
 data/*
+debug.py
+__pycache__/

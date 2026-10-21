@@ -11,34 +11,15 @@ from pathlib import Path
 from PIL import Image
 from torch.utils.data import Dataset
 
-ROOT = Path('data')
+# ROOT = Path('data')
+ROOT = Path('C:\\Users\\Utente\\Drake\\GENSKETCH\\data')
 INDEX = ROOT / 'index.json'
 SEED = 42
 PHOTOS = 'photo'
 SKETCHES = 'sketch'
 
 
-def get_train_val_records(idx_path: Path, categories: set[str]):
-    if idx_path.exists():
-        index = json.loads(INDEX.read_text(encoding='utf-8'))
-    else:
-        index = create_index()
-
-    held_fold = 0
-
-    train_records = [
-        r for r in index["records"]
-        if r["category"] in categories and r["fold"] != held_fold
-    ]
-    val_records = [
-        r for r in index["records"]
-        if r["category"] in categories and r["fold"] == held_fold
-    ]
-
-    return train_records, val_records
-
-
-def create_index():
+def create_index(k: int = 5):
     categories = sorted(
         p.name for p in (ROOT / PHOTOS).iterdir() if p.is_dir()
     )
@@ -53,7 +34,7 @@ def create_index():
 
         random.Random(SEED + label).shuffle(photo_ids)
         fold_by_photo = {
-            photo_id: position % 5
+            photo_id: position % k
             for position, photo_id in enumerate(photo_ids)
         }
 
@@ -79,6 +60,32 @@ def create_index():
     return index
 
 
+def get_train_val_records(idx_path: Path, categories: set[str], test_fold: int):
+    if idx_path.exists():
+        index = json.loads(INDEX.read_text(encoding='utf-8'))
+    else:
+        index = create_index()
+
+    val_fold = (test_fold + 1) % 5
+
+    selected = [
+        r for r in index['records']
+        if r['category'] in categories
+    ]
+
+    train_records = [
+        r for r in selected if r['fold'] not in (val_fold, test_fold)
+    ]
+    val_records = [
+        r for r in selected if r['fold'] == val_fold
+    ]
+    test_records = [
+        r for r in selected if r['fold'] == test_fold
+    ]
+
+    return train_records, val_records, test_records
+
+
 class SketchClassifierDataset(Dataset):
     def __init__(self, root, records, size=256):
         self.root = root
@@ -100,16 +107,14 @@ class SketchClassifierDataset(Dataset):
         return sketch, record['label']
 
 
-if __name__ == '__main__':
-    from torch.utils.data import DataLoader
+# if __name__ == '__main__':
+#     from torch.utils.data import DataLoader
     
-    selected = {'motorcycle'}
-    train_records, val_records = get_train_val_records(Path(ROOT / 'index.json'), selected)
+#     selected = {'motorcycle'}
+#     train_records, val_records = get_train_val_records(Path(ROOT / 'index.json'), selected)
 
-    train_dataset = SketchClassifierDataset(ROOT, train_records)
-    val_dataset = SketchClassifierDataset(ROOT, val_records)
+#     train_dataset = SketchClassifierDataset(ROOT, train_records)
+#     val_dataset = SketchClassifierDataset(ROOT, val_records)
 
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-
-    print(train_dataset[0])
+#     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+#     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)

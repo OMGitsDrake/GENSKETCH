@@ -2,7 +2,7 @@
 Ogni categoria ha 100 foto e un numero variabile di sketch (sempre maggiore di 100).
 
 Organizzare le immagini come segue:
-- per ogni foto che appartiene a uno fold
+- per ogni foto che appartiene a un fold
 - tutti i suoi sketch appartengono allo stesso fold
 
 ## Immagini per training e validation
