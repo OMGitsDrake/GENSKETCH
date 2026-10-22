@@ -60,9 +60,9 @@ def create_index(k: int = 5):
     return index
 
 
-def get_train_val_records(idx_path: Path, categories: set[str], test_fold: int):
+def get_split_records(idx_path: Path, categories: set[str], test_fold: int):
     if idx_path.exists():
-        index = json.loads(INDEX.read_text(encoding='utf-8'))
+        index = json.loads(idx_path.read_text(encoding='utf-8'))
     else:
         index = create_index()
 

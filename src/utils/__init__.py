@@ -1,6 +1,6 @@
 from .data.SketchDataset import (
     SketchClassifierDataset,
-    get_train_val_records
+    get_split_records
 )
 
 from .constants import(
@@ -21,7 +21,7 @@ from .logging.levels import(
 
 __all__ = [
     'SketchClassifierDataset',
-    'get_train_val_records',
+    'get_split_records',
     'write_log',
     'LOG_DEBUG',
     'LOG_INFO',
