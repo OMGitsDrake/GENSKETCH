@@ -2,3 +2,5 @@ data/*
 debug.py
 __pycache__/
 logs/
+**/*todo*
+models/

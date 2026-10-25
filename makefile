@@ -1,9 +1,9 @@
 PYTHON ?= py
 
-.PHONY: help MLP_main
+.PHONY: help classification_main
 
 help:
-	@echo "MLP_main		Avvia addestramento e test del MLP"
+	@echo "classification_main		Avvia addestramento e test del classificatore"
 
-MLP_main:
-	$(PYTHON) -m src.classification.MLP_main
+classification_main:
+	$(PYTHON) -m src.classification.classification_main

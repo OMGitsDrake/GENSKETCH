@@ -1,10 +1,12 @@
 import torch
 import torch.nn as nn
 import os
+import json
+import hashlib
 from torch.utils.data import DataLoader
 from datetime import datetime
 from pathlib import Path
-from .modules import MLP
+from .modules import CNN_classification
 from ..utils import (
     SketchClassifierDataset,
     get_split_records,
@@ -15,7 +17,7 @@ from ..utils import (
 FILE_NAME = Path(__file__).stem
 
 def train_one_epoch(
-    model: MLP,
+    model: CNN_classification,
     loader: DataLoader,
     loss_fn: nn.CrossEntropyLoss,
     optim: torch.optim.Optimizer,
@@ -95,6 +97,13 @@ def validate(
 def main():
     CAT_SUBSET = 10
     BATCH_SIZE = 32
+    PATIENCE = 20
+    MIN_DELTA = 1e-3
+    IN_CHANNELS = 1
+    HIDDEN_LAYERS = 3
+    OUT_CLASSES = 125
+    STARTING_HIDDEN_CHANNELS = 16
+    WEIGHT_DECAY = 1e-4
 
     selected = set(
         sorted(
@@ -110,19 +119,42 @@ def main():
     lr = 3e-4
     epochs = 150
 
+    config = {
+        "model": "CNN",
+        "hidden_layers": HIDDEN_LAYERS,
+        "starting_hidden_channels": STARTING_HIDDEN_CHANNELS,
+        "normalization": "GroupNorm",
+        "groups": 4,
+        "categories": sorted(selected),
+        "image_size": 256,
+        "optimizer": "AdamW",
+        "lr": lr,
+        "weight_decay": WEIGHT_DECAY,
+        "batch_size": BATCH_SIZE,
+        "epochs": epochs,
+        "patience": PATIENCE,
+        "min_delta": MIN_DELTA,
+    }
+
+    config_json = json.dumps(config, sort_keys=True, separators=(",", ":"))
+    config_id = hashlib.sha256(config_json.encode("utf-8")).hexdigest()[:10]
+    run_id = datetime.now().strftime("%Y%m%d")
+
+    LOG_FILE = f'{FILE_NAME}_{config_id}_{run_id}.log'
+    write_log(
+        f'CONFIG_ID: {config_id}\n'
+        f'CONFIG: {config_json}',
+        LOG_FILE
+    )
+
     write_log(
         f'Current configuration:\n'
-        f'\tDEVICE: {device}\n'
-        f'\tLR: {lr}\n'
-        f'\tLOSS: {loss_fn.__str__()}\n'
-        f'\tEPOCHS: {epochs}\n'
-        f'\t#CATEGORIES: {CAT_SUBSET}\n'
-        f'\tBATCH SIZE: {BATCH_SIZE}\n',
-        FILE_NAME
+        f'{config}',
+        LOG_FILE
     )
 
     print(f'RUN STARTED AT {datetime.now().astimezone().strftime("%H:%M:%S")}')
-    write_log(f'RUN STARTED AT {datetime.now().astimezone().strftime("%H:%M:%S")}', FILE_NAME)
+    write_log(f'RUN STARTED AT {datetime.now().astimezone().strftime("%H:%M:%S")}', LOG_FILE)
 
     fold_results = []
     for test_fold in range(5):
@@ -131,15 +163,21 @@ def main():
         )
         write_log(
             f'=====Fold {test_fold}=====\n',
-            FILE_NAME
+            LOG_FILE
         )
-        model = MLP().to(device)
+        # model = CNN_classification(1, 3, 125).to(device)
+        model = CNN_classification(
+            in_channels=IN_CHANNELS,
+            hidden_layers=HIDDEN_LAYERS,
+            out_classes=OUT_CLASSES,
+            starting_hidden_channels=STARTING_HIDDEN_CHANNELS
+        ).to(device)
         # === OPTIM. BASELINE 1 ===
         # optim = torch.optim.SGD(
         #     model.parameters(),
         #     lr,
         #     momentum=0.9,
-        #     weight_decay=1e-4,
+        #     weight_decay=WEIGHT_DECAY,
         # )
         # === OPTIM. BASELINE 2 ===
         # optim = torch.optim.Adam(
@@ -151,7 +189,7 @@ def main():
         optim = torch.optim.AdamW(
             model.parameters(),
             lr,
-            weight_decay=1e-4
+            weight_decay=WEIGHT_DECAY
         )
 
         train_records, val_records, test_records = get_split_records(Path(DATA / 'index.json'), selected, test_fold)
@@ -165,10 +203,9 @@ def main():
         test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
         best_val_loss = float('inf')
-        checkpoint_path = f'{MODELS_DIR}/mlp_fold_{test_fold}_best.pt'
+        checkpoint_path = f'{MODELS_DIR}/cnn_fold_{test_fold}_best.pt'
 
         straight_nonimproving_epochs = 0
-        last_epoch_val_loss = float('inf')
 
         for epoch in range(1, epochs + 1):
             train_loss, train_acc = train_one_epoch(
@@ -179,6 +216,14 @@ def main():
                 device,
             )
 
+            if epoch % 15 == 0:
+                train_eval_loss, train_eval_acc = validate(
+                    model,
+                    train_loader,
+                    loss_fn,
+                    device
+                )
+
             val_loss, val_acc = validate(
                 model,
                 val_loader,
@@ -186,45 +231,70 @@ def main():
                 device
             )
 
-            if abs(val_loss - last_epoch_val_loss) <= 1e-3:
-                straight_nonimproving_epochs += 1
-                if straight_nonimproving_epochs == 20:
-                    break
+            if epoch % 15 == 0:
+                print(
+                    f'[FOLD {test_fold}]'
+                    f'[EPOCH {epoch}]\n'
+                    f'TRAIN:\n'
+                    f'\tLOSS: {train_loss}\n'
+                    f'\tACC: {train_acc}\n'
+                    f'EVAL TRAIN:\n'
+                    f'\tLOSS: {train_eval_loss}\n'
+                    f'\tACC: {train_eval_acc}\n'
+                    f'VALIDATION:\n'
+                    f'\tLOSS: {val_loss}\n'
+                    f'\t(BEST): {best_val_loss}\n'
+                    f'\tACC: {val_acc}\n'
+                )
+                write_log(
+                    f'[FOLD {test_fold}]'
+                    f'[EPOCH {epoch}]\n'
+                    f'TRAIN:\n'
+                    f'\tLOSS: {train_loss}\n'
+                    f'\tACC: {train_acc}\n'
+                    f'EVAL TRAIN:\n'
+                    f'\tLOSS: {train_eval_loss}\n'
+                    f'\tACC: {train_eval_acc}\n'
+                    f'VALIDATION:\n'
+                    f'\tLOSS: {val_loss}\n'
+                    f'\t(BEST): {best_val_loss}\n'
+                    f'\tACC: {val_acc}\n',
+                    LOG_FILE
+                )
             else:
-                straight_nonimproving_epochs = 0
+                print(
+                    f'[FOLD {test_fold}]'
+                    f'[EPOCH {epoch}]\n'
+                    f'TRAIN:\n'
+                    f'\tLOSS: {train_loss}\n'
+                    f'\tACC: {train_acc}\n'
+                    f'VALIDATION:\n'
+                    f'\tLOSS: {val_loss}\n'
+                    f'\t(BEST): {best_val_loss}\n'
+                    f'\tACC: {val_acc}\n'
+                )
+                write_log(
+                    f'[FOLD {test_fold}]'
+                    f'[EPOCH {epoch}]\n'
+                    f'TRAIN:\n'
+                    f'\tLOSS: {train_loss}\n'
+                    f'\tACC: {train_acc}\n'
+                    f'VALIDATION:\n'
+                    f'\tLOSS: {val_loss}\n'
+                    f'\t(BEST): {best_val_loss}\n'
+                    f'\tACC: {val_acc}\n',
+                    LOG_FILE
+                )
 
-            print(
-                f'[FOLD {test_fold}]'
-                f'[EPOCH {epoch}]\n'
-                f'TRAIN:\n'
-                f'\tLOSS: {train_loss}\n'
-                f'\tACC: {train_acc}\n'
-                f'VALIDATION:\n'
-                f'\tLOSS: {val_loss}\n'
-                f'\t(BEST): {best_val_loss}\n'
-                f'\tACC: {val_acc}\n'
-            )
-            write_log(
-                f'[FOLD {test_fold}]'
-                f'[EPOCH {epoch}]\n'
-                f'TRAIN:\n'
-                f'\tLOSS: {train_loss}\n'
-                f'\tACC: {train_acc}\n'
-                f'VALIDATION:\n'
-                f'\tLOSS: {val_loss}\n'
-                f'\t(BEST): {best_val_loss}\n'
-                f'\tACC: {val_acc}\n',
-                FILE_NAME
-            )
-
-            if val_loss < best_val_loss:
+            if val_loss < best_val_loss - MIN_DELTA:
                 best_val_loss = val_loss
+                straight_nonimproving_epochs = 0
                 print(
                     f'NEW BEST VAL LOSS: {best_val_loss}'
                 )
                 write_log(
                     f'NEW BEST VAL LOSS: {best_val_loss}',
-                    FILE_NAME
+                    LOG_FILE
                 )
 
                 torch.save({
@@ -235,6 +305,14 @@ def main():
                     'val_acc': val_acc,
                     'fold': test_fold,
                 }, checkpoint_path)
+            else:
+                straight_nonimproving_epochs += 1
+
+            if straight_nonimproving_epochs >= PATIENCE:
+                break
+
+            if straight_nonimproving_epochs > 0:
+                print(f'STREAK OF NON-IMPROVING EPOCHS: {straight_nonimproving_epochs}\n')
 
         best_checkpoint = torch.load(
             checkpoint_path,
@@ -243,7 +321,7 @@ def main():
         )
 
         model.load_state_dict(best_checkpoint['model_state'])
-        model.eval().to(device)
+        model.to(device)
 
         test_loss, test_acc = validate(
             model,
@@ -272,7 +350,7 @@ def main():
             f'TEST:\n'
             f'\tLOSS: {test_loss}\n'
             f'\tACC: {test_acc}\n',
-            FILE_NAME
+            LOG_FILE
         )
 
     mean_loss = (
@@ -287,7 +365,7 @@ def main():
     )
 
     print(f'RUN FINISHED AT {datetime.now().astimezone().strftime("%H:%M:%S")}')
-    write_log(f'RUN FINISHED AT {datetime.now().astimezone().strftime("%H:%M:%S")}', FILE_NAME)
+    write_log(f'RUN FINISHED AT {datetime.now().astimezone().strftime("%H:%M:%S")}', LOG_FILE)
     
     print(
         f'MEAN LOSS IN FOLDS: {mean_loss}'
@@ -297,17 +375,17 @@ def main():
     )
     write_log(
         f'MEAN LOSS IN FOLDS: {mean_loss}',
-        FILE_NAME
+        LOG_FILE
     )
     write_log(
         f'MEAN ACCURACY IN FOLDS: {mean_accuracy}',
-        FILE_NAME
+        LOG_FILE
     )
 
     best_fold = min(fold_results, key=lambda r: r['val_loss'])
     print(
         f'BEST FOLD: {best_fold["fold"]}\n'
-        f'\tEPOCH: {best_fold["best_epoch"]}'
+        f'\tEPOCH: {best_fold["best_epoch"]}\n'
         f'\tVAL LOSS: {best_fold["val_loss"]}\n'
         f'\tVAL ACCURACY: {best_fold["val_accuracy"]}\n'
         f'\tTEST LOSS: {best_fold["test_loss"]}\n'
@@ -315,12 +393,12 @@ def main():
     )
     write_log(
         f'BEST FOLD: {best_fold["fold"]}\n'
-        f'\tEPOCH: {best_fold["best_epoch"]}'
+        f'\tEPOCH: {best_fold["best_epoch"]}\n'
         f'\tVAL LOSS: {best_fold["val_loss"]}\n'
         f'\tVAL ACCURACY: {best_fold["val_accuracy"]}\n'
         f'\tTEST LOSS: {best_fold["test_loss"]}\n'
         f'\tTEST ACCURACY: {best_fold["test_accuracy"]}\n',
-        FILE_NAME
+        LOG_FILE
     )
 
 if __name__ == '__main__':
