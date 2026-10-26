@@ -117,7 +117,7 @@ def main():
     print(f'Using device {device}')
     loss_fn = nn.CrossEntropyLoss()
     lr = 3e-4
-    epochs = 150
+    epochs = 225
 
     config = {
         "model": "CNN",
@@ -140,7 +140,7 @@ def main():
     config_id = hashlib.sha256(config_json.encode("utf-8")).hexdigest()[:10]
     run_id = datetime.now().strftime("%Y%m%d")
 
-    LOG_FILE = f'{FILE_NAME}_{config_id}_{run_id}.log'
+    LOG_FILE = f'{FILE_NAME}_{config_id}_{run_id}'
     write_log(
         f'CONFIG_ID: {config_id}\n'
         f'CONFIG: {config_json}',
@@ -203,6 +203,7 @@ def main():
         test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
         best_val_loss = float('inf')
+        best_epoch = None
         checkpoint_path = f'{MODELS_DIR}/cnn_fold_{test_fold}_best.pt'
 
         straight_nonimproving_epochs = 0
@@ -216,13 +217,13 @@ def main():
                 device,
             )
 
-            if epoch % 15 == 0:
-                train_eval_loss, train_eval_acc = validate(
-                    model,
-                    train_loader,
-                    loss_fn,
-                    device
-                )
+            # if epoch % 15 == 0:
+            #     train_eval_loss, train_eval_acc = validate(
+            #         model,
+            #         train_loader,
+            #         loss_fn,
+            #         device
+            #     )
 
             val_loss, val_acc = validate(
                 model,
@@ -231,63 +232,9 @@ def main():
                 device
             )
 
-            if epoch % 15 == 0:
-                print(
-                    f'[FOLD {test_fold}]'
-                    f'[EPOCH {epoch}]\n'
-                    f'TRAIN:\n'
-                    f'\tLOSS: {train_loss}\n'
-                    f'\tACC: {train_acc}\n'
-                    f'EVAL TRAIN:\n'
-                    f'\tLOSS: {train_eval_loss}\n'
-                    f'\tACC: {train_eval_acc}\n'
-                    f'VALIDATION:\n'
-                    f'\tLOSS: {val_loss}\n'
-                    f'\t(BEST): {best_val_loss}\n'
-                    f'\tACC: {val_acc}\n'
-                )
-                write_log(
-                    f'[FOLD {test_fold}]'
-                    f'[EPOCH {epoch}]\n'
-                    f'TRAIN:\n'
-                    f'\tLOSS: {train_loss}\n'
-                    f'\tACC: {train_acc}\n'
-                    f'EVAL TRAIN:\n'
-                    f'\tLOSS: {train_eval_loss}\n'
-                    f'\tACC: {train_eval_acc}\n'
-                    f'VALIDATION:\n'
-                    f'\tLOSS: {val_loss}\n'
-                    f'\t(BEST): {best_val_loss}\n'
-                    f'\tACC: {val_acc}\n',
-                    LOG_FILE
-                )
-            else:
-                print(
-                    f'[FOLD {test_fold}]'
-                    f'[EPOCH {epoch}]\n'
-                    f'TRAIN:\n'
-                    f'\tLOSS: {train_loss}\n'
-                    f'\tACC: {train_acc}\n'
-                    f'VALIDATION:\n'
-                    f'\tLOSS: {val_loss}\n'
-                    f'\t(BEST): {best_val_loss}\n'
-                    f'\tACC: {val_acc}\n'
-                )
-                write_log(
-                    f'[FOLD {test_fold}]'
-                    f'[EPOCH {epoch}]\n'
-                    f'TRAIN:\n'
-                    f'\tLOSS: {train_loss}\n'
-                    f'\tACC: {train_acc}\n'
-                    f'VALIDATION:\n'
-                    f'\tLOSS: {val_loss}\n'
-                    f'\t(BEST): {best_val_loss}\n'
-                    f'\tACC: {val_acc}\n',
-                    LOG_FILE
-                )
-
-            if val_loss < best_val_loss - MIN_DELTA:
+            if val_loss < best_val_loss: # - MIN_DELTA:
                 best_val_loss = val_loss
+                best_epoch = epoch
                 straight_nonimproving_epochs = 0
                 print(
                     f'NEW BEST VAL LOSS: {best_val_loss}'
@@ -309,7 +256,62 @@ def main():
                 straight_nonimproving_epochs += 1
 
             if straight_nonimproving_epochs >= PATIENCE:
-                break
+                break # early stop
+
+            # if epoch % 15 == 0:
+            #     print(
+            #         f'[FOLD {test_fold}]'
+            #         f'[EPOCH {epoch}]\n'
+            #         f'TRAIN:\n'
+            #         f'\tLOSS: {train_loss}\n'
+            #         f'\tACC: {train_acc}\n'
+            #         f'EVAL TRAIN:\n'
+            #         f'\tLOSS: {train_eval_loss}\n'
+            #         f'\tACC: {train_eval_acc}\n'
+            #         f'VALIDATION:\n'
+            #         f'\tLOSS: {val_loss}\n'
+            #         f'\t(BEST): {best_val_loss}\n'
+            #         f'\tACC: {val_acc}\n'
+            #     )
+            #     write_log(
+            #         f'[FOLD {test_fold}]'
+            #         f'[EPOCH {epoch}]\n'
+            #         f'TRAIN:\n'
+            #         f'\tLOSS: {train_loss}\n'
+            #         f'\tACC: {train_acc}\n'
+            #         f'EVAL TRAIN:\n'
+            #         f'\tLOSS: {train_eval_loss}\n'
+            #         f'\tACC: {train_eval_acc}\n'
+            #         f'VALIDATION:\n'
+            #         f'\tLOSS: {val_loss}\n'
+            #         f'\t(BEST): {best_val_loss}\n'
+            #         f'\tACC: {val_acc}\n',
+            #         LOG_FILE
+            #     )
+            # else:
+            print(
+                f'[FOLD {test_fold}]'
+                f'[EPOCH {epoch}]\n'
+                f'TRAIN:\n'
+                f'\tLOSS: {train_loss}\n'
+                f'\tACC: {train_acc}\n'
+                f'VALIDATION:\n'
+                f'\tLOSS: {val_loss}\n'
+                f'\t(BEST [{best_epoch}]): {best_val_loss}\n'
+                f'\tACC: {val_acc}\n'
+            )
+            write_log(
+                f'[FOLD {test_fold}]'
+                f'[EPOCH {epoch}]\n'
+                f'TRAIN:\n'
+                f'\tLOSS: {train_loss}\n'
+                f'\tACC: {train_acc}\n'
+                f'VALIDATION:\n'
+                f'\tLOSS: {val_loss}\n'
+                f'\t(BEST [{best_epoch}]): {best_val_loss}\n'
+                f'\tACC: {val_acc}\n',
+                LOG_FILE
+            )
 
             if straight_nonimproving_epochs > 0:
                 print(f'STREAK OF NON-IMPROVING EPOCHS: {straight_nonimproving_epochs}\n')
