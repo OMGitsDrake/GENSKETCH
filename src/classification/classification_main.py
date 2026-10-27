@@ -95,12 +95,14 @@ def validate(
 
 
 def main():
+    BASE_SEED = 42
+    
     CAT_SUBSET = 10
     BATCH_SIZE = 32
     PATIENCE = 20
-    MIN_DELTA = 1e-3
+    # MIN_DELTA = 1e-3
     IN_CHANNELS = 1
-    HIDDEN_LAYERS = 3
+    HIDDEN_LAYERS = 4 # 3
     OUT_CLASSES = 125
     STARTING_HIDDEN_CHANNELS = 16
     WEIGHT_DECAY = 1e-4
@@ -120,6 +122,7 @@ def main():
     epochs = 225
 
     config = {
+        "base_seed": BASE_SEED,
         "model": "CNN",
         "hidden_layers": HIDDEN_LAYERS,
         "starting_hidden_channels": STARTING_HIDDEN_CHANNELS,
@@ -133,7 +136,7 @@ def main():
         "batch_size": BATCH_SIZE,
         "epochs": epochs,
         "patience": PATIENCE,
-        "min_delta": MIN_DELTA,
+        "min_delta": None, # MIN_DELTA,
     }
 
     config_json = json.dumps(config, sort_keys=True, separators=(",", ":"))
@@ -147,22 +150,21 @@ def main():
         LOG_FILE
     )
 
-    write_log(
-        f'Current configuration:\n'
-        f'{config}',
-        LOG_FILE
-    )
-
     print(f'RUN STARTED AT {datetime.now().astimezone().strftime("%H:%M:%S")}')
     write_log(f'RUN STARTED AT {datetime.now().astimezone().strftime("%H:%M:%S")}', LOG_FILE)
 
     fold_results = []
     for test_fold in range(5):
+        fold_seed = BASE_SEED + test_fold
+        torch.manual_seed(fold_seed)
+        
         print(
             f'=====Fold {test_fold}=====\n'
+            f'=====[Seed] {fold_seed}=====\n'
         )
         write_log(
-            f'=====Fold {test_fold}=====\n',
+            f'=====Fold {test_fold}=====\n'
+            f'=====[Seed] {fold_seed}=====\n',
             LOG_FILE
         )
         # model = CNN_classification(1, 3, 125).to(device)
@@ -198,7 +200,8 @@ def main():
         val_dataset = SketchClassifierDataset(DATA, val_records)
         test_dataset = SketchClassifierDataset(DATA, test_records)
 
-        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        shuffle_generator = torch.Generator().manual_seed(fold_seed)
+        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, generator=shuffle_generator)
         val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
         test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 

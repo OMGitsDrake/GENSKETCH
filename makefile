@@ -7,7 +7,7 @@ help:
 	@echo "run_dir model=<model>		Organizza i checkpoint in una nuova directory di run"
 
 classification_main:
-	$(PYTHON) -m src.classification.classification_main
+	$(PYTHON) -m src.classification
 
 run_dir:
 	@test -n "$(model)" || { echo "Uso: make run_dir model=cnn"; exit 1; }
