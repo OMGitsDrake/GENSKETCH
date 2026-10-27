@@ -125,6 +125,7 @@ def main():
         "base_seed": BASE_SEED,
         "model": "CNN",
         "hidden_layers": HIDDEN_LAYERS,
+        "convs_per_block": 2,
         "starting_hidden_channels": STARTING_HIDDEN_CHANNELS,
         "normalization": "GroupNorm",
         "groups": 4,
@@ -150,8 +151,10 @@ def main():
         LOG_FILE
     )
 
-    print(f'RUN STARTED AT {datetime.now().astimezone().strftime("%H:%M:%S")}')
-    write_log(f'RUN STARTED AT {datetime.now().astimezone().strftime("%H:%M:%S")}', LOG_FILE)
+    start = datetime.now()#.astimezone().strftime("%H:%M:%S")
+
+    print(f'RUN STARTED AT {start.astimezone().strftime("%H:%M:%S")}')
+    write_log(f'RUN STARTED AT {start.astimezone().strftime("%H:%M:%S")}', LOG_FILE)
 
     fold_results = []
     for test_fold in range(5):
@@ -369,8 +372,18 @@ def main():
         len(fold_results)
     )
 
-    print(f'RUN FINISHED AT {datetime.now().astimezone().strftime("%H:%M:%S")}')
-    write_log(f'RUN FINISHED AT {datetime.now().astimezone().strftime("%H:%M:%S")}', LOG_FILE)
+    end = datetime.now()
+    elapsed = end-start
+    hours, remainder = divmod(elapsed.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    # alternativa: str(elapsed).split('.')[0]
+    elapsed_str = f'{hours:02d}:{minutes:02d}:{seconds:02d}'
+
+    print(f'RUN FINISHED AT {end.astimezone().strftime("%H:%M:%S")}')
+    write_log(f'RUN FINISHED AT {end.astimezone().strftime("%H:%M:%S")}', LOG_FILE)
+
+    print(f'ELAPSED {elapsed_str}')
+    write_log(f'ELAPSED {elapsed_str}', LOG_FILE)
     
     print(
         f'MEAN LOSS IN FOLDS: {mean_loss}'
