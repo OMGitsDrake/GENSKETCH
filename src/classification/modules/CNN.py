@@ -1,5 +1,4 @@
 import torch.nn as nn
-import torch
 
 class CNN_classification(nn.Module):
     def __init__(
@@ -12,11 +11,6 @@ class CNN_classification(nn.Module):
         super().__init__()
         self.hidden_layers = hidden_layers
         hcs = starting_hidden_channels
-        
-        self.conv_layers = nn.ModuleList()
-        self.norm_layers = nn.ModuleList()
-        self.non_linear_layers = nn.ModuleList()
-        self.pooling_layers = nn.ModuleList()
         
         self.blocks = nn.ModuleList()
         for i in range(hidden_layers):

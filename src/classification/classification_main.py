@@ -151,7 +151,7 @@ def main():
         LOG_FILE
     )
 
-    start = datetime.now()#.astimezone().strftime("%H:%M:%S")
+    start = datetime.now()
 
     print(f'RUN STARTED AT {start.astimezone().strftime("%H:%M:%S")}')
     write_log(f'RUN STARTED AT {start.astimezone().strftime("%H:%M:%S")}', LOG_FILE)
