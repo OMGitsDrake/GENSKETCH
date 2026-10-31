@@ -10,6 +10,7 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 from torch.utils.data import Dataset
+from torchvision.transforms import RandomAffine, InterpolationMode
 
 # ROOT = Path('data')
 ROOT = Path('C:\\Users\\Utente\\Drake\\GENSKETCH\\data')
@@ -87,10 +88,18 @@ def get_split_records(idx_path: Path, categories: set[str], test_fold: int):
 
 
 class SketchClassifierDataset(Dataset):
-    def __init__(self, root, records, size=256):
+    def __init__(self, root, records, size=256, augment=False):
         self.root = root
         self.records = records
         self.size = size
+
+        self.augmentation = RandomAffine(
+            degrees=5,
+            translate=(0.03, 0.03),
+            scale=(0.95, 1.05),
+            interpolation=InterpolationMode.BILINEAR,
+            fill=255,  # sfondo bianco degli sketch
+        ) if augment else None
 
     def __len__(self):
         return len(self.records)
@@ -101,20 +110,9 @@ class SketchClassifierDataset(Dataset):
 
         with Image.open(path) as image:
             image = image.convert('L').resize((self.size, self.size))
+            if self.augmentation is not None:
+                image = self.augmentation(image)
             array = np.array(image, dtype=np.float32)
 
         sketch = torch.from_numpy(array).unsqueeze(0) / 255.0
         return sketch, record['label']
-
-
-# if __name__ == '__main__':
-#     from torch.utils.data import DataLoader
-    
-#     selected = {'motorcycle'}
-#     train_records, val_records = get_train_val_records(Path(ROOT / 'index.json'), selected)
-
-#     train_dataset = SketchClassifierDataset(ROOT, train_records)
-#     val_dataset = SketchClassifierDataset(ROOT, val_records)
-
-#     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-#     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)

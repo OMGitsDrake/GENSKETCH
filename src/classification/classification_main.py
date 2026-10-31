@@ -200,7 +200,7 @@ def main():
 
         train_records, val_records, test_records = get_split_records(Path(DATA / 'index.json'), selected, test_fold)
 
-        train_dataset = SketchClassifierDataset(DATA, train_records)
+        train_dataset = SketchClassifierDataset(DATA, train_records, augment=True)
         val_dataset = SketchClassifierDataset(DATA, val_records)
         test_dataset = SketchClassifierDataset(DATA, test_records)
 
