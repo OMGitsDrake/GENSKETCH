@@ -104,7 +104,7 @@ def main():
     IN_CHANNELS = 1
     HIDDEN_LAYERS = 4 # 3
     OUT_CLASSES = 125
-    STARTING_HIDDEN_CHANNELS = 16
+    STARTING_HIDDEN_CHANNELS = 24 # 16
     WEIGHT_DECAY = 1e-4
 
     selected = set(
@@ -126,6 +126,7 @@ def main():
         "model": "CNN",
         "hidden_layers": HIDDEN_LAYERS,
         "convs_per_block": 2,
+        "residual_blocks": True,
         "starting_hidden_channels": STARTING_HIDDEN_CHANNELS,
         "normalization": "GroupNorm",
         "groups": 4,
