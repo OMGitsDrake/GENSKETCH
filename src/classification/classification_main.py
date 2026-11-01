@@ -4,6 +4,9 @@ import os
 import json
 import hashlib
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import(
+    ReduceLROnPlateau
+)
 from datetime import datetime
 from pathlib import Path
 from .modules import CNN_classification
@@ -99,7 +102,8 @@ def main():
     
     CAT_SUBSET = 10
     BATCH_SIZE = 32
-    PATIENCE = 20
+    PATIENCE = 30 # 20
+    SCHED_PATIENCE = 7
     # MIN_DELTA = 1e-3
     IN_CHANNELS = 1
     HIDDEN_LAYERS = 4 # 3
@@ -134,6 +138,13 @@ def main():
         "image_size": 256,
         "optimizer": "AdamW",
         "lr": lr,
+        "scheduler": "ReduceLROnPlateau",
+        "sched_patience": SCHED_PATIENCE,
+        "sched_factor": 0.5,
+        "sched_threshold": 0.0,
+        "sched_threshold_mode": "abs",
+        "sched_min_lr": 1e-6,
+        "train_augmentation": "RandomAffine(degrees=5, translate=0.03, scale=0.95-1.05)",
         "weight_decay": WEIGHT_DECAY,
         "batch_size": BATCH_SIZE,
         "epochs": epochs,
@@ -197,6 +208,15 @@ def main():
             lr,
             weight_decay=WEIGHT_DECAY
         )
+        scheduler = ReduceLROnPlateau(
+            optim,
+            mode='min',
+            factor=0.5,
+            patience=SCHED_PATIENCE,
+            threshold=0.0,
+            threshold_mode='abs',
+            min_lr=1e-6,
+        )
 
         train_records, val_records, test_records = get_split_records(Path(DATA / 'index.json'), selected, test_fold)
 
@@ -216,6 +236,8 @@ def main():
         straight_nonimproving_epochs = 0
 
         for epoch in range(1, epochs + 1):
+            lr_this_epoch = optim.param_groups[0]['lr']
+
             train_loss, train_acc = train_one_epoch(
                 model,
                 train_loader,
@@ -238,6 +260,8 @@ def main():
                 loss_fn,
                 device
             )
+
+            scheduler.step(val_loss)
 
             if val_loss < best_val_loss: # - MIN_DELTA:
                 best_val_loss = val_loss
@@ -302,6 +326,7 @@ def main():
                 f'TRAIN:\n'
                 f'\tLOSS: {train_loss}\n'
                 f'\tACC: {train_acc}\n'
+                f'\tLR: {lr_this_epoch}\n'
                 f'VALIDATION:\n'
                 f'\tLOSS: {val_loss}\n'
                 f'\t(BEST [{best_epoch}]): {best_val_loss}\n'
@@ -313,6 +338,7 @@ def main():
                 f'TRAIN:\n'
                 f'\tLOSS: {train_loss}\n'
                 f'\tACC: {train_acc}\n'
+                f'\tLR: {lr_this_epoch}\n'
                 f'VALIDATION:\n'
                 f'\tLOSS: {val_loss}\n'
                 f'\t(BEST [{best_epoch}]): {best_val_loss}\n'
