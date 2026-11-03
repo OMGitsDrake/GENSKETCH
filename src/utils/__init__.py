@@ -19,6 +19,10 @@ from .logging.levels import(
     LOG_ERR,
 )
 
+from .logging.plots import(
+    print_losses_plot
+)
+
 __all__ = [
     'SketchClassifierDataset',
     'get_split_records',
@@ -27,4 +31,5 @@ __all__ = [
     'LOG_INFO',
     'LOG_WARN',
     'LOG_ERR',
+    'print_losses_plot',
 ]

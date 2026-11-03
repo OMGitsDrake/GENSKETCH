@@ -1,0 +1,173 @@
+ATTUALI
+Totale cumulativo: 10 categorie. Sono le prime 10 selezionate dal main corrente.
+
+- airplane
+- alarm_clock
+- ant
+- ape
+- apple
+- armor
+- axe
+- banana
+- bat
+- bear
+
++20-25
+Obiettivo scelto: 25 categorie totali. Aggiungere queste 15 alle 10 attuali.
+
+Animali terrestri (10)
+- cat
+- dog
+- cow
+- horse
+- lion
+- tiger
+- deer
+- elephant
+- giraffe
+- rabbit
+
+Veicoli e mezzi di trasporto (5)
+- bicycle
+- car_(sedan)
+- motorcycle
+- helicopter
+- sailboat
+
++50
+Obiettivo: 50 categorie totali. Aggiungere queste 25 alle 25 precedenti.
+
+Altri animali (10)
+- bee
+- beetle
+- butterfly
+- camel
+- chicken
+- duck
+- fish
+- frog
+- owl
+- penguin
+
+Altri mezzi di trasporto (5)
+- blimp
+- hot-air_balloon
+- pickup_truck
+- rocket
+- tank
+
+Cibi e frutti (7)
+- bread
+- hamburger
+- pizza
+- pear
+- strawberry
+- hotdog
+- pretzel
+
+Oggetti comuni (3)
+- chair
+- cup
+- table
+
++100-125
+Prima arrivare a 100 categorie: aggiungere queste 50 alle 50 precedenti.
+
+Altri mammiferi e animali terrestri (10)
+- hedgehog
+- kangaroo
+- lizard
+- mouse
+- pig
+- raccoon
+- rhinoceros
+- sheep
+- squirrel
+- zebra
+
+Animali acquatici e semiacquatici (11)
+- crab
+- crocodilian
+- dolphin
+- hermit_crab
+- jellyfish
+- lobster
+- ray
+- sea_turtle
+- seal
+- shark
+- turtle
+
+Uccelli, invertebrati e altri animali (10)
+- parrot
+- scorpion
+- seagull
+- snail
+- snake
+- songbird
+- spider
+- starfish
+- swan
+- wading_bird
+
+Strumenti musicali (6)
+- guitar
+- harp
+- piano
+- saxophone
+- trumpet
+- violin
+
+Utensili, sport e armi (7)
+- hammer
+- knife
+- rifle
+- saw
+- scissors
+- sword
+- racket
+
+Piante ed elementi naturali (6)
+- flower
+- geyser
+- mushroom
+- pineapple
+- tree
+- volcano
+
+Poi arrivare a 125 categorie: aggiungere le ultime 25 alle 100 precedenti.
+
+Edifici, strutture e arredi (9)
+- bench
+- cabin
+- castle
+- church
+- couch
+- door
+- skyscraper
+- windmill
+- window
+
+Oggetti personali e domestici (12)
+- bell
+- candle
+- eyeglasses
+- fan
+- hat
+- hourglass
+- shoe
+- spoon
+- teapot
+- teddy_bear
+- umbrella
+- wine_bottle
+
+Altri oggetti e mezzi (4)
+- cannon
+- jack-o-lantern
+- pistol
+- wheelchair
+
+Regola per ogni fase: il set di categorie è cumulativo; mantenere tutte quelle delle fasi precedenti. Conservare gli ID globali delle 125 classi e gli split per foto/fold già definiti. Per confrontare le prestazioni tra fasi, usare nuove run di cross-validation con la stessa procedura e registrare le metriche anche per singola categoria.
+
+Nota operativa: il main attuale prende le prime CAT_SUBSET directory in ordine alfabetico. Aumentare solo CAT_SUBSET a 25, 50 o 100 NON selezionerebbe questi gruppi: occorre costruire esplicitamente la lista cumulativa della fase scelta e registrarla nella configurazione della run.

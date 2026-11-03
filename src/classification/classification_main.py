@@ -16,6 +16,7 @@ from ..utils import (
     write_log,
     MODELS_DIR,
     DATA,
+    print_losses_plot
 )
 FILE_NAME = Path(__file__).stem
 
@@ -100,7 +101,6 @@ def validate(
 def main():
     BASE_SEED = 42
     
-    CAT_SUBSET = 10
     BATCH_SIZE = 32
     PATIENCE = 30 # 20
     SCHED_PATIENCE = 7
@@ -111,11 +111,39 @@ def main():
     STARTING_HIDDEN_CHANNELS = 24 # 16
     WEIGHT_DECAY = 1e-4
 
-    selected = set(
-        sorted(
-        f for f in os.listdir(DATA / 'photo')
-        )[:CAT_SUBSET]
-    )
+    # selected = set(
+    #     sorted(
+    #     f for f in os.listdir(DATA / 'photo')
+    #     )[:CAT_SUBSET]
+    # )
+
+    selected = set([
+        "airplane",
+        "alarm_clock",
+        "ant",
+        "ape",
+        "apple",
+        "armor",
+        "axe",
+        "banana",
+        "bat",
+        "bear", # 10 iniziali
+        "cat",
+        "dog",
+        "cow",
+        "horse",
+        "lion",
+        "tiger",
+        "deer",
+        "elephant",
+        "giraffe",
+        "rabbit", # +10 animali terrestri
+        "bicycle",
+        "car_(sedan)",
+        "motorcycle",
+        "helicopter",
+        "sailboat", # +5 veicoli e mezzi di trasporto
+    ])
 
     device = torch.device(
         'cuda' if torch.cuda.is_available() else 'cpu'
@@ -132,6 +160,7 @@ def main():
         "convs_per_block": 2,
         "residual_blocks": True,
         "starting_hidden_channels": STARTING_HIDDEN_CHANNELS,
+        "dropout": 0.2,
         "normalization": "GroupNorm",
         "groups": 4,
         "categories": sorted(selected),
@@ -169,7 +198,15 @@ def main():
     write_log(f'RUN STARTED AT {start.astimezone().strftime("%H:%M:%S")}', LOG_FILE)
 
     fold_results = []
+    fold_metrics ={
+        "train_loss_curve": ([], []),
+        "val_loss_curve": ([], []),
+    }
+    fold_boundaries = []
     for test_fold in range(5):
+        if test_fold > 0:
+            fold_boundaries.append(len(fold_metrics['train_loss_curve'][0]) + 0.5)
+        
         fold_seed = BASE_SEED + test_fold
         torch.manual_seed(fold_seed)
         
@@ -236,6 +273,7 @@ def main():
         straight_nonimproving_epochs = 0
 
         for epoch in range(1, epochs + 1):
+            plot_epoch = len(fold_metrics['train_loss_curve'][0]) + 1
             lr_this_epoch = optim.param_groups[0]['lr']
 
             train_loss, train_acc = train_one_epoch(
@@ -245,14 +283,8 @@ def main():
                 optim,
                 device,
             )
-
-            # if epoch % 15 == 0:
-            #     train_eval_loss, train_eval_acc = validate(
-            #         model,
-            #         train_loader,
-            #         loss_fn,
-            #         device
-            #     )
+            fold_metrics["train_loss_curve"][0].append(plot_epoch)
+            fold_metrics["train_loss_curve"][1].append(train_loss)
 
             val_loss, val_acc = validate(
                 model,
@@ -260,6 +292,8 @@ def main():
                 loss_fn,
                 device
             )
+            fold_metrics["val_loss_curve"][0].append(plot_epoch)
+            fold_metrics["val_loss_curve"][1].append(val_loss)
 
             scheduler.step(val_loss)
 
@@ -289,37 +323,6 @@ def main():
             if straight_nonimproving_epochs >= PATIENCE:
                 break # early stop
 
-            # if epoch % 15 == 0:
-            #     print(
-            #         f'[FOLD {test_fold}]'
-            #         f'[EPOCH {epoch}]\n'
-            #         f'TRAIN:\n'
-            #         f'\tLOSS: {train_loss}\n'
-            #         f'\tACC: {train_acc}\n'
-            #         f'EVAL TRAIN:\n'
-            #         f'\tLOSS: {train_eval_loss}\n'
-            #         f'\tACC: {train_eval_acc}\n'
-            #         f'VALIDATION:\n'
-            #         f'\tLOSS: {val_loss}\n'
-            #         f'\t(BEST): {best_val_loss}\n'
-            #         f'\tACC: {val_acc}\n'
-            #     )
-            #     write_log(
-            #         f'[FOLD {test_fold}]'
-            #         f'[EPOCH {epoch}]\n'
-            #         f'TRAIN:\n'
-            #         f'\tLOSS: {train_loss}\n'
-            #         f'\tACC: {train_acc}\n'
-            #         f'EVAL TRAIN:\n'
-            #         f'\tLOSS: {train_eval_loss}\n'
-            #         f'\tACC: {train_eval_acc}\n'
-            #         f'VALIDATION:\n'
-            #         f'\tLOSS: {val_loss}\n'
-            #         f'\t(BEST): {best_val_loss}\n'
-            #         f'\tACC: {val_acc}\n',
-            #         LOG_FILE
-            #     )
-            # else:
             print(
                 f'[FOLD {test_fold}]'
                 f'[EPOCH {epoch}]\n'
@@ -445,6 +448,7 @@ def main():
         f'\tTEST ACCURACY: {best_fold["test_accuracy"]}\n',
         LOG_FILE
     )
+    print_losses_plot(fold_metrics, fold_boundaries, run_id)
 
 if __name__ == '__main__':
     main()
