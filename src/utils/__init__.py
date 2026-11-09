@@ -20,7 +20,8 @@ from .logging.levels import(
 )
 
 from .logging.plots import(
-    print_losses_plot
+    print_losses_plot,
+    print_confusion_matrix
 )
 
 __all__ = [
@@ -32,4 +33,7 @@ __all__ = [
     'LOG_WARN',
     'LOG_ERR',
     'print_losses_plot',
+    'print_confusion_matrix',
+    'MODELS_DIR',
+    'DATA',
 ]

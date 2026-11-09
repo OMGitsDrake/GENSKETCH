@@ -16,8 +16,11 @@ from ..utils import (
     write_log,
     MODELS_DIR,
     DATA,
-    print_losses_plot
+    print_losses_plot,
+    print_confusion_matrix
 )
+from typing import Literal, overload
+
 FILE_NAME = Path(__file__).stem
 
 def train_one_epoch(
@@ -60,17 +63,41 @@ def train_one_epoch(
     return train_loss, train_accuracy
 
 
+@overload
 def validate(
     model,
     loader,
     loss_fn,
-    device
-) -> tuple[float, float]:
+    device,
+    is_test: Literal[False] = False
+) -> tuple[float, float]: ...
+
+
+@overload
+def validate(
+    model,
+    loader,
+    loss_fn,
+    device,
+    is_test: Literal[True]
+) -> tuple[float, float, list[int], list[int]]: ...
+
+
+def validate(
+    model,
+    loader,
+    loss_fn,
+    device,
+    is_test: bool = False
+) -> tuple[float, float, list[int], list[int]] | tuple[float, float]:
     model.eval()
 
     total_loss = 0.0
     correct = 0
     total_samples = 0
+
+    if is_test:
+        y_true, y_pred = [], []
 
     with torch.inference_mode():
         for sketches, labels in loader:
@@ -88,6 +115,10 @@ def validate(
 
             predicted_labels = logits.argmax(dim=1)
 
+            if is_test:
+                y_true.extend(labels.cpu().tolist())
+                y_pred.extend(predicted_labels.cpu().tolist())
+
             correct += (predicted_labels == labels).sum().item()
 
             total_samples += batch_size
@@ -95,7 +126,13 @@ def validate(
 
     avg_loss = total_loss / total_samples
     accuracy = correct / total_samples
-    return avg_loss, accuracy
+
+    if is_test:
+        r = (avg_loss, accuracy, y_true, y_pred)
+    else:
+        r = (avg_loss, accuracy)
+    
+    return r
 
 
 def main():
@@ -286,11 +323,12 @@ def main():
             fold_metrics["train_loss_curve"][0].append(plot_epoch)
             fold_metrics["train_loss_curve"][1].append(train_loss)
 
-            val_loss, val_acc = validate(
+            val_loss, val_acc= validate(
                 model,
                 val_loader,
                 loss_fn,
-                device
+                device,
+                is_test=False
             )
             fold_metrics["val_loss_curve"][0].append(plot_epoch)
             fold_metrics["val_loss_curve"][1].append(val_loss)
@@ -361,11 +399,19 @@ def main():
         model.load_state_dict(best_checkpoint['model_state'])
         model.to(device)
 
-        test_loss, test_acc = validate(
+        test_loss, test_acc, y_true, y_pred = validate(
             model,
             test_loader,
             loss_fn,
-            device
+            device,
+            is_test=True
+        )
+
+        print_confusion_matrix(
+            y_true,
+            y_pred,
+            {record['category']: record['label'] for record in test_records},
+            filename=f'confusion_matrix_fold_{test_fold}_{config_id}_{run_id}.png'
         )
 
         fold_results.append({
