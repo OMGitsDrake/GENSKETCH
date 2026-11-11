@@ -210,7 +210,7 @@ def main():
         "sched_threshold": 0.0,
         "sched_threshold_mode": "abs",
         "sched_min_lr": 1e-6,
-        "train_augmentation": "RandomAffine(degrees=5, translate=0.03, scale=0.95-1.05)",
+        "train_augmentation": "RandomAffine(degrees=8, translate=0.05, scale=0.90-1.10)",
         "weight_decay": WEIGHT_DECAY,
         "batch_size": BATCH_SIZE,
         "epochs": epochs,

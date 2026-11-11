@@ -94,9 +94,9 @@ class SketchClassifierDataset(Dataset):
         self.size = size
 
         self.augmentation = RandomAffine(
-            degrees=5,
-            translate=(0.03, 0.03),
-            scale=(0.95, 1.05),
+            degrees=8, # 5,
+            translate=(0.05, 0.05), # (0.03, 0.03),
+            scale=(0.90, 1.10), # (0.95, 1.05),
             interpolation=InterpolationMode.BILINEAR,
             fill=255,  # sfondo bianco degli sketch
         ) if augment else None
