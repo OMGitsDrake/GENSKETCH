@@ -140,7 +140,7 @@ def main():
     
     BATCH_SIZE = 32
     PATIENCE = 30 # 20
-    SCHED_PATIENCE = 7
+    SCHED_PATIENCE = 5 # 7
     # MIN_DELTA = 1e-3
     IN_CHANNELS = 1
     HIDDEN_LAYERS = 4 # 3
