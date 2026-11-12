@@ -2,7 +2,12 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from .writing import LOG_DIR
 
-def print_losses_plot(metrics: dict[str, tuple[list[int], list[float]]], fold_boundaries, run_id) -> None:
+def print_losses_plot(
+    metrics: dict[str, tuple[list[int], list[float]]],
+    fold_boundaries,
+    run_id,
+    save_fig: bool = True
+) -> None:
     x_train: list[int] = metrics['train_loss_curve'][0]
     y_train: list[float] = metrics['train_loss_curve'][1]
     x_val: list[int] = metrics['val_loss_curve'][0]
@@ -12,12 +17,14 @@ def print_losses_plot(metrics: dict[str, tuple[list[int], list[float]]], fold_bo
         x_val, y_val, 'b--',
     )
     for boundary in fold_boundaries:
-        plt.axvline(boundary, color='gray', linestyle='--', alpha=0.6)
+        plt.axvline(boundary, color='gray', linestyle='-.', alpha=0.6, linewidth=0.8)
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
-    plt.savefig(
-        LOG_DIR / f'train_val_loss_curves_{run_id}.png'
-    )
+    plt.grid(alpha=0.5, linestyle='--', linewidth=0.7)
+    if save_fig:
+        plt.savefig(
+            LOG_DIR / f'train_val_loss_curves_{run_id}.png'
+        )
     plt.show()
 
 def print_confusion_matrix(
@@ -65,5 +72,6 @@ if __name__ == '__main__':
     print_losses_plot(
         m,
         b,
-        42
+        42,
+        save_fig=False
     )
