@@ -140,13 +140,13 @@ def main():
     
     BATCH_SIZE = 32
     PATIENCE = 30 # 20
-    SCHED_PATIENCE = 5 # 7
+    SCHED_PATIENCE = 7
     # MIN_DELTA = 1e-3
     IN_CHANNELS = 1
     HIDDEN_LAYERS = 4 # 3
     OUT_CLASSES = 125
     STARTING_HIDDEN_CHANNELS = 24 # 16
-    WEIGHT_DECAY = 1e-4
+    WEIGHT_DECAY = 1e-4 # 1e-3 da eseguire
 
     # selected = set(
     #     sorted(

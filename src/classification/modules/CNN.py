@@ -28,7 +28,7 @@ class CNN_classification(nn.Module):
 
         self.output_block = nn.Sequential(
             nn.Flatten(),
-            nn.Dropout(p=0.2),
+            nn.Dropout(p=0.3),
             nn.Linear(hcs//2, out_classes)
         )
 
