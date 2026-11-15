@@ -1,5 +1,6 @@
 import torch.nn as nn
 from .Residual import ResBlock
+from ...utils import config as cfg
 
 class CNN_classification(nn.Module):
     def __init__(
@@ -7,7 +8,7 @@ class CNN_classification(nn.Module):
         in_channels: int,
         hidden_layers: int,
         out_classes: int,
-        starting_hidden_channels: int = 16
+        starting_hidden_channels: int = cfg.STARTING_HIDDEN_CHANNELS
     ):
         super().__init__()
         self.hidden_layers = hidden_layers
@@ -28,7 +29,7 @@ class CNN_classification(nn.Module):
 
         self.output_block = nn.Sequential(
             nn.Flatten(),
-            nn.Dropout(p=0.3),
+            nn.Dropout(p=cfg.DROPOUT),
             nn.Linear(hcs//2, out_classes)
         )
 

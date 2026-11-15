@@ -1,15 +1,12 @@
 import torch
 import torch.nn as nn
-import os
 import json
 import hashlib
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import(
-    ReduceLROnPlateau
-)
 from datetime import datetime
 from pathlib import Path
 from .modules import CNN_classification
+from ..utils import config as cfg
 from ..utils import (
     SketchClassifierDataset,
     get_split_records,
@@ -136,86 +133,43 @@ def validate(
 
 
 def main():
-    BASE_SEED = 42
-    
-    BATCH_SIZE = 32
-    PATIENCE = 30 # 20
-    SCHED_PATIENCE = 7
-    # MIN_DELTA = 1e-3
-    IN_CHANNELS = 1
-    HIDDEN_LAYERS = 4 # 3
-    OUT_CLASSES = 125
-    STARTING_HIDDEN_CHANNELS = 24 # 16
-    WEIGHT_DECAY = 1e-4 # 1e-3 da eseguire
-
-    # selected = set(
-    #     sorted(
-    #     f for f in os.listdir(DATA / 'photo')
-    #     )[:CAT_SUBSET]
-    # )
-
-    selected = set([
-        "airplane",
-        "alarm_clock",
-        "ant",
-        "ape",
-        "apple",
-        "armor",
-        "axe",
-        "banana",
-        "bat",
-        "bear", # 10 iniziali
-        "cat",
-        "dog",
-        "cow",
-        "horse",
-        "lion",
-        "tiger",
-        "deer",
-        "elephant",
-        "giraffe",
-        "rabbit", # +10 animali terrestri
-        "bicycle",
-        "car_(sedan)",
-        "motorcycle",
-        "helicopter",
-        "sailboat", # +5 veicoli e mezzi di trasporto
-    ])
+    selected = set(cfg.SELECTED_CATEGORIES)
 
     device = torch.device(
         'cuda' if torch.cuda.is_available() else 'cpu'
     )
     print(f'Using device {device}')
     loss_fn = nn.CrossEntropyLoss()
-    lr = 3e-4
-    epochs = 225
-
     config = {
-        "base_seed": BASE_SEED,
-        "model": "CNN",
-        "hidden_layers": HIDDEN_LAYERS,
-        "convs_per_block": 2,
-        "residual_blocks": True,
-        "starting_hidden_channels": STARTING_HIDDEN_CHANNELS,
-        "dropout": 0.2,
-        "normalization": "GroupNorm",
-        "groups": 4,
+        "base_seed": cfg.BASE_SEED,
+        "k_folds": cfg.K_FOLDS,
+        "model": cfg.MODEL_NAME,
+        "in_channels": cfg.IN_CHANNELS,
+        "out_classes": cfg.OUT_CLASSES,
+        "hidden_layers": cfg.HIDDEN_LAYERS,
+        "convs_per_block": cfg.CONVS_PER_BLOCK,
+        "residual_blocks": cfg.RESIDUAL_BLOCKS,
+        "starting_hidden_channels": cfg.STARTING_HIDDEN_CHANNELS,
+        "dropout": cfg.DROPOUT,
+        "normalization": cfg.NORMALIZATION,
+        "groups": cfg.GROUPS,
         "categories": sorted(selected),
-        "image_size": 256,
-        "optimizer": "AdamW",
-        "lr": lr,
-        "scheduler": "ReduceLROnPlateau",
-        "sched_patience": SCHED_PATIENCE,
-        "sched_factor": 0.5,
-        "sched_threshold": 0.0,
-        "sched_threshold_mode": "abs",
-        "sched_min_lr": 1e-6,
-        "train_augmentation": "RandomAffine(degrees=8, translate=0.05, scale=0.90-1.10)",
-        "weight_decay": WEIGHT_DECAY,
-        "batch_size": BATCH_SIZE,
-        "epochs": epochs,
-        "patience": PATIENCE,
-        "min_delta": None, # MIN_DELTA,
+        "image_size": cfg.IMAGE_SIZE,
+        "optimizer": cfg.OPTIMIZER_CLASS.__name__,
+        "lr": cfg.LR,
+        "scheduler": cfg.SCHEDULER_CLASS.__name__,
+        "sched_mode": cfg.SCHED_MODE,
+        "sched_patience": cfg.SCHED_PATIENCE,
+        "sched_factor": cfg.SCHED_FACTOR,
+        "sched_threshold": cfg.SCHED_THRESHOLD,
+        "sched_threshold_mode": cfg.SCHED_THRESHOLD_MODE,
+        "sched_min_lr": cfg.SCHED_MIN_LR,
+        "train_augmentation": cfg.TRAIN_AUGMENTATION,
+        "weight_decay": cfg.WEIGHT_DECAY,
+        "batch_size": cfg.BATCH_SIZE,
+        "epochs": cfg.EPOCHS,
+        "patience": cfg.PATIENCE,
+        "min_delta": cfg.MIN_DELTA,
     }
 
     config_json = json.dumps(config, sort_keys=True, separators=(",", ":"))
@@ -240,11 +194,11 @@ def main():
         "val_loss_curve": ([], []),
     }
     fold_boundaries = []
-    for test_fold in range(5):
+    for test_fold in range(cfg.K_FOLDS):
         if test_fold > 0:
             fold_boundaries.append(len(fold_metrics['train_loss_curve'][0]) + 0.5)
         
-        fold_seed = BASE_SEED + test_fold
+        fold_seed = cfg.BASE_SEED + test_fold
         torch.manual_seed(fold_seed)
         
         print(
@@ -256,52 +210,41 @@ def main():
             f'=====[Seed] {fold_seed}=====\n',
             LOG_FILE
         )
-        # model = CNN_classification(1, 3, 125).to(device)
         model = CNN_classification(
-            in_channels=IN_CHANNELS,
-            hidden_layers=HIDDEN_LAYERS,
-            out_classes=OUT_CLASSES,
-            starting_hidden_channels=STARTING_HIDDEN_CHANNELS
+            in_channels=cfg.IN_CHANNELS,
+            hidden_layers=cfg.HIDDEN_LAYERS,
+            out_classes=cfg.OUT_CLASSES,
+            starting_hidden_channels=cfg.STARTING_HIDDEN_CHANNELS
         ).to(device)
-        # === OPTIM. BASELINE 1 ===
-        # optim = torch.optim.SGD(
-        #     model.parameters(),
-        #     lr,
-        #     momentum=0.9,
-        #     weight_decay=WEIGHT_DECAY,
-        # )
-        # === OPTIM. BASELINE 2 ===
-        # optim = torch.optim.Adam(
-        #     model.parameters(),
-        #     lr,
-        #     weight_decay=0
-        # )
-        # === OPTIM. BASELINE 3 ===
-        optim = torch.optim.AdamW(
+        optim = cfg.OPTIMIZER_CLASS(
             model.parameters(),
-            lr,
-            weight_decay=WEIGHT_DECAY
+            cfg.LR,
+            weight_decay=cfg.WEIGHT_DECAY
         )
-        scheduler = ReduceLROnPlateau(
+        scheduler = cfg.SCHEDULER_CLASS(
             optim,
-            mode='min',
-            factor=0.5,
-            patience=SCHED_PATIENCE,
-            threshold=0.0,
-            threshold_mode='abs',
-            min_lr=1e-6,
+            mode=cfg.SCHED_MODE,
+            factor=cfg.SCHED_FACTOR,
+            patience=cfg.SCHED_PATIENCE,
+            threshold=cfg.SCHED_THRESHOLD,
+            threshold_mode=cfg.SCHED_THRESHOLD_MODE,
+            min_lr=cfg.SCHED_MIN_LR,
         )
 
-        train_records, val_records, test_records = get_split_records(Path(DATA / 'index.json'), selected, test_fold)
+        train_records, val_records, test_records = get_split_records(
+            Path(DATA / 'index.json'),
+            selected,
+            test_fold
+        )
 
-        train_dataset = SketchClassifierDataset(DATA, train_records, augment=True)
-        val_dataset = SketchClassifierDataset(DATA, val_records)
-        test_dataset = SketchClassifierDataset(DATA, test_records)
+        train_dataset = SketchClassifierDataset(DATA, train_records, size=cfg.IMAGE_SIZE, augment=True)
+        val_dataset = SketchClassifierDataset(DATA, val_records, size=cfg.IMAGE_SIZE)
+        test_dataset = SketchClassifierDataset(DATA, test_records, size=cfg.IMAGE_SIZE)
 
         shuffle_generator = torch.Generator().manual_seed(fold_seed)
-        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, generator=shuffle_generator)
-        val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
-        test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        train_loader = DataLoader(train_dataset, batch_size=cfg.BATCH_SIZE, shuffle=True, generator=shuffle_generator)
+        val_loader = DataLoader(val_dataset, batch_size=cfg.BATCH_SIZE, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=cfg.BATCH_SIZE, shuffle=False)
 
         best_val_loss = float('inf')
         best_epoch = None
@@ -309,7 +252,7 @@ def main():
 
         straight_nonimproving_epochs = 0
 
-        for epoch in range(1, epochs + 1):
+        for epoch in range(1, cfg.EPOCHS + 1):
             plot_epoch = len(fold_metrics['train_loss_curve'][0]) + 1
             lr_this_epoch = optim.param_groups[0]['lr']
 
@@ -335,7 +278,7 @@ def main():
 
             scheduler.step(val_loss)
 
-            if val_loss < best_val_loss: # - MIN_DELTA:
+            if val_loss < best_val_loss - (cfg.MIN_DELTA or 0.0):
                 best_val_loss = val_loss
                 best_epoch = epoch
                 straight_nonimproving_epochs = 0
@@ -358,7 +301,7 @@ def main():
             else:
                 straight_nonimproving_epochs += 1
 
-            if straight_nonimproving_epochs >= PATIENCE:
+            if straight_nonimproving_epochs >= cfg.PATIENCE:
                 break # early stop
 
             print(

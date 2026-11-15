@@ -11,16 +11,17 @@ from pathlib import Path
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.transforms import RandomAffine, InterpolationMode
+from .. import config as cfg
+from ..constants import DATA
 
-# ROOT = Path('data')
-ROOT = Path('C:\\Users\\Utente\\Drake\\GENSKETCH\\data')
+ROOT = DATA
 INDEX = ROOT / 'index.json'
-SEED = 42
+SEED = cfg.BASE_SEED
 PHOTOS = 'photo'
 SKETCHES = 'sketch'
 
 
-def create_index(k: int = 5):
+def create_index(k: int = cfg.K_FOLDS):
     categories = sorted(
         p.name for p in (ROOT / PHOTOS).iterdir() if p.is_dir()
     )
@@ -67,7 +68,7 @@ def get_split_records(idx_path: Path, categories: set[str], test_fold: int):
     else:
         index = create_index()
 
-    val_fold = (test_fold + 1) % 5
+    val_fold = (test_fold + 1) % cfg.K_FOLDS
 
     selected = [
         r for r in index['records']
@@ -88,17 +89,20 @@ def get_split_records(idx_path: Path, categories: set[str], test_fold: int):
 
 
 class SketchClassifierDataset(Dataset):
-    def __init__(self, root, records, size=256, augment=False):
+    def __init__(self, root, records, size=cfg.IMAGE_SIZE, augment=False):
         self.root = root
         self.records = records
         self.size = size
 
+        augmentation = cfg.TRAIN_AUGMENTATION
+        if augmentation["name"] != "RandomAffine":
+            raise ValueError("Il Dataset supporta soltanto RandomAffine")
         self.augmentation = RandomAffine(
-            degrees=8, # 5,
-            translate=(0.05, 0.05), # (0.03, 0.03),
-            scale=(0.90, 1.10), # (0.95, 1.05),
-            interpolation=InterpolationMode.BILINEAR,
-            fill=255,  # sfondo bianco degli sketch
+            degrees=augmentation["degrees"],
+            translate=augmentation["translate"],
+            scale=augmentation["scale"],
+            interpolation=InterpolationMode[augmentation["interpolation"]],
+            fill=augmentation["fill"],
         ) if augment else None
 
     def __len__(self):
