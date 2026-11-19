@@ -4,10 +4,12 @@ Esempi, dalla root del repository:
     py -m src.utils.preview_sketch --category cat
     py -m src.utils.preview_sketch --category cat --split train --fold 0 --augment
     py -m src.utils.preview_sketch --category cat --augment --output preview.png
+    py -m src.utils.preview_sketch --category cat --random-sample --seed 123
 """
 
 import argparse
 import json
+import random
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +18,7 @@ from PIL import Image, ImageDraw
 from torch.utils.data import DataLoader, Subset
 
 from .data.SketchDataset import SketchClassifierDataset, get_split_records
+from .config import IMAGE_SIZE
 
 
 def parse_args():
@@ -25,13 +28,16 @@ def parse_args():
     parser.add_argument("--split", choices=("all", "train", "val", "test"), default="all")
     parser.add_argument("--fold", type=int, choices=range(5), default=0,
                         help="Fold di test, usato quando --split non è all")
-    parser.add_argument("--sample-index", type=int, default=0,
-                        help="Indice dello sketch nei record selezionati")
-    parser.add_argument("--size", type=int, default=256)
+    sample_selection = parser.add_mutually_exclusive_group()
+    sample_selection.add_argument("--sample-index", type=int, default=0,
+                                  help="Indice dello sketch nei record selezionati (default: 0)")
+    sample_selection.add_argument("--random-sample", action="store_true",
+                                  help="Sceglie uno sketch casuale, riproducibile con --seed")
+    parser.add_argument("--size", type=int, default=IMAGE_SIZE)
     parser.add_argument("--augment", action="store_true",
                         help="Mostra originale e variante RandomAffine affiancati")
     parser.add_argument("--seed", type=int, default=42,
-                        help="Seed della trasformazione casuale")
+                        help="Seed della scelta casuale e della trasformazione")
     parser.add_argument("--output", type=Path,
                         help="Salva una PNG invece di aprire il visualizzatore")
     return parser.parse_args()
@@ -71,23 +77,25 @@ def main():
 
     if not records:
         raise ValueError("Nessuno sketch trovato con i filtri richiesti")
-    if not 0 <= args.sample_index < len(records):
+    sample_index = (random.Random(args.seed).randrange(len(records))
+                    if args.random_sample else args.sample_index)
+    if not 0 <= sample_index < len(records):
         raise IndexError(f"sample-index deve essere tra 0 e {len(records) - 1}")
 
     dataset = SketchClassifierDataset(root, records, size=args.size)
-    sketch, label = load_tensor(dataset, args.sample_index)
+    sketch, label = load_tensor(dataset, sample_index)
     images = [("originale", to_image(sketch))]
 
     if args.augment:
         torch.manual_seed(args.seed)
         augmented_dataset = SketchClassifierDataset(root, records, size=args.size,
                                                      augment=True)
-        augmented, augmented_label = load_tensor(augmented_dataset, args.sample_index)
+        augmented, augmented_label = load_tensor(augmented_dataset, sample_index)
         if augmented_label != label:
             raise RuntimeError("L'augmentation ha cambiato l'etichetta")
         images.append(("augmentato", to_image(augmented)))
 
-    record = records[args.sample_index]
+    record = records[sample_index]
     if label != record["label"]:
         raise RuntimeError("L'etichetta del Dataset non coincide con index.json")
 
@@ -99,6 +107,7 @@ def main():
         canvas.paste(image, (left, banner_height))
         draw.text((left + 5, 5), name, fill="black")
 
+    print(f"Campione: {sample_index} di {len(records)}")
     print(f"Categoria: {record['category']} (label {label})")
     print(f"Split: {args.split}; fold del record: {record['fold']}")
     print(f"Sketch: {root / record['sketch']}")
