@@ -26,20 +26,14 @@ def parse_args():
     parser.add_argument("--data-root", type=Path, default=Path("data"))
     parser.add_argument("--category", help="Categoria da visualizzare; default: tutte")
     parser.add_argument("--split", choices=("all", "train", "val", "test"), default="all")
-    parser.add_argument("--fold", type=int, choices=range(5), default=0,
-                        help="Fold di test, usato quando --split non è all")
+    parser.add_argument("--fold", type=int, choices=range(5), default=0, help="Fold di test, usato quando --split non è all")
     sample_selection = parser.add_mutually_exclusive_group()
-    sample_selection.add_argument("--sample-index", type=int, default=0,
-                                  help="Indice dello sketch nei record selezionati (default: 0)")
-    sample_selection.add_argument("--random-sample", action="store_true",
-                                  help="Sceglie uno sketch casuale, riproducibile con --seed")
+    sample_selection.add_argument("--sample-index", type=int, default=0, help="Indice dello sketch nei record selezionati (default: 0)")
+    sample_selection.add_argument("--random-sample", action="store_true", help="Sceglie uno sketch casuale, riproducibile con --seed")
     parser.add_argument("--size", type=int, default=IMAGE_SIZE)
-    parser.add_argument("--augment", action="store_true",
-                        help="Mostra originale e variante RandomAffine affiancati")
-    parser.add_argument("--seed", type=int, default=42,
-                        help="Seed della scelta casuale e della trasformazione")
-    parser.add_argument("--output", type=Path,
-                        help="Salva una PNG invece di aprire il visualizzatore")
+    parser.add_argument("--augment", action="store_true", help="Mostra originale e variante RandomAffine affiancati")
+    parser.add_argument("--seed", type=int, default=42, help="Seed della scelta casuale e della trasformazione")
+    parser.add_argument("--output", type=Path, help="Salva una PNG invece di aprire il visualizzatore")
     return parser.parse_args()
 
 
