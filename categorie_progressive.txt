@@ -135,6 +135,9 @@ Piante ed elementi naturali (6)
 - tree
 - volcano
 
+(QUI)
+  |
+  V
 Poi arrivare a 125 categorie: aggiungere le ultime 25 alle 100 precedenti.
 
 Edifici, strutture e arredi (9)

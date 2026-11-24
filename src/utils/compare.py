@@ -17,33 +17,49 @@ def main():
                     json_obj_cmp = json.load(f_cmp)
                     mean_test_loss_1 = json_obj['mean_test_loss']
                     mean_test_loss_2 = json_obj_cmp['mean_test_loss']
+                    mean_val_loss_1 = json_obj['mean_val_loss']
+                    mean_val_loss_2 = json_obj_cmp['mean_val_loss']
                     mean_test_accuracy_1 = json_obj['mean_test_accuracy']
                     mean_test_accuracy_2 = json_obj_cmp['mean_test_accuracy']
+                    mean_val_accuracy_1 = json_obj['mean_val_accuracy']
+                    mean_val_accuracy_2 = json_obj_cmp['mean_val_accuracy']
 
                     cmp_out = {
                         'mean_test_loss_diff': mean_test_loss_1 - mean_test_loss_2,
                         'mean_test_accuracy_diff': mean_test_accuracy_1 - mean_test_accuracy_2,
+                        'mean_val_loss_diff': mean_val_loss_1 - mean_val_loss_2,
+                        'mean_val_accuracy_diff': mean_val_accuracy_1 - mean_val_accuracy_2,
                     }
 
                     print(json.dumps(cmp_out, indent=2))
 
         best_fold = None
-        best_loss = None
+        best_test_loss = None
+        best_val_loss = None
         mean_test_loss = 0
         mean_test_accuracy = 0
+        mean_val_loss = 0
+        mean_val_accuracy = 0
         for result in r_list:
             mean_test_loss += result['test_loss']
             mean_test_accuracy += result['test_acc']
+            mean_val_loss += result['val_loss']
+            mean_val_accuracy += result['val_acc']
 
-            if best_loss is None or result['val_loss'] < best_loss:
-                best_loss = result['val_loss']
+            if best_test_loss is None or result['val_loss'] < best_test_loss:
+                best_test_loss = result['val_loss']
+            #    best_fold = result['fold']
+            
+            if best_val_loss is None or result['val_loss'] < best_val_loss:
+                best_val_loss = result['val_loss']
                 best_fold = result['fold']
 
         out = {
             'mean_test_loss': mean_test_loss/len(r_list),
             'mean_test_accuracy': mean_test_accuracy/len(r_list),
             'best_fold': best_fold,
-            'best_loss': best_loss,
+            'best_val_loss': best_val_loss,
+            'best_test_loss': best_test_loss,
         }
 
         print(json.dumps(out, indent=2))
