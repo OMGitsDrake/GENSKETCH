@@ -57,6 +57,8 @@ def main():
         out = {
             'mean_test_loss': mean_test_loss/len(r_list),
             'mean_test_accuracy': mean_test_accuracy/len(r_list),
+            'mean_val_loss': mean_val_loss/len(r_list),
+            'mean_val_accuracy': mean_val_accuracy/len(r_list),
             'best_fold': best_fold,
             'best_val_loss': best_val_loss,
             'best_test_loss': best_test_loss,
