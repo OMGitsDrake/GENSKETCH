@@ -155,6 +155,7 @@ def main():
         "groups": cfg.GROUPS,
         "categories": sorted(selected),
         "image_size": cfg.IMAGE_SIZE,
+        "use_compile": cfg.USE_COMPILE,
         "optimizer": cfg.OPTIMIZER_CLASS.__name__,
         "lr": cfg.LR,
         "scheduler": cfg.SCHEDULER_CLASS.__name__,
@@ -216,6 +217,10 @@ def main():
             out_classes=cfg.OUT_CLASSES,
             starting_hidden_channels=cfg.STARTING_HIDDEN_CHANNELS
         ).to(device)
+        
+        if cfg.USE_COMPILE:
+            model.compile()
+        
         optim = cfg.OPTIMIZER_CLASS(
             model.parameters(),
             cfg.LR,
