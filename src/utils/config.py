@@ -114,6 +114,32 @@ SELECTED_CATEGORIES = [
     "pineapple",
     "tree",
     "volcano",
+    # da qui siamo a 125
+    "bench",
+    "cabin",
+    "castle",
+    "church",
+    "couch",
+    "door",
+    "skyscraper",
+    "windmill",
+    "window",
+    "bell",
+    "candle",
+    "eyeglasses",
+    "fan",
+    "hat",
+    "hourglass",
+    "shoe",
+    "spoon",
+    "teapot",
+    "teddy_bear",
+    "umbrella",
+    "wine_bottle",
+    "cannon",
+    "jack-o-lantern",
+    "pistol",
+    "wheelchair",
 ]
 
 MODEL_NAME = "CNN"
@@ -126,6 +152,7 @@ RESIDUAL_BLOCKS = True
 NORMALIZATION = "GroupNorm"
 GROUPS = 4
 DROPOUT = 0.2
+DROPOUT2D = 0.075
 IMAGE_SIZE = 128 # 256
 USE_COMPILE = True
 

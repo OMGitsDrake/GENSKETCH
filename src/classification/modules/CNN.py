@@ -28,6 +28,8 @@ class CNN_classification(nn.Module):
             )
             hcs *= 2
 
+        self.dropout_2d = nn.Dropout2d(p=cfg.DROPOUT2D)
+
         self.max_block = nn.AdaptiveMaxPool2d(output_size=1)
         self.avg_block = nn.AdaptiveAvgPool2d(output_size=1)
 
@@ -41,6 +43,8 @@ class CNN_classification(nn.Module):
         out = minibatch
         for block in self.blocks:
             out = block(out)
+
+        out = self.dropout_2d(out)
 
         out = cat([self.max_block(out), self.avg_block(out)], dim=1)
 

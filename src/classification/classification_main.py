@@ -151,6 +151,7 @@ def main():
         "residual_blocks": cfg.RESIDUAL_BLOCKS,
         "starting_hidden_channels": cfg.STARTING_HIDDEN_CHANNELS,
         "dropout": cfg.DROPOUT,
+        "dropout_2d": cfg.DROPOUT2D,
         "normalization": cfg.NORMALIZATION,
         "groups": cfg.GROUPS,
         "categories": sorted(selected),
